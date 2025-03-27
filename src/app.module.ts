@@ -9,6 +9,7 @@ import { DestinosModule } from './modules/destinos/destinos.module';
 import { ViajesModule } from './modules/viajes/viajes.module';
 import { DataProcesadaModule } from './modules/data-procesada/data-procesada.module';
 import { PlantaModule } from './modules/planta/planta.module';
+import { ProductosModule } from './modules/productos/productos.module';
 
 
 
@@ -20,7 +21,8 @@ import { PlantaModule } from './modules/planta/planta.module';
     DestinosModule,
     ViajesModule,
     DataProcesadaModule,
-    PlantaModule
+    PlantaModule,
+    ProductosModule
   ],
   controllers: [AppController],
   providers: [AppService, MyLogger],
