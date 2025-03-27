@@ -1,0 +1,113 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("POSTGRES_URL")
+}
+
+model User {
+  id       Int       @id @default(autoincrement())
+  username String    @unique
+  role     String
+  plantaId Int
+  password String
+  planta   Plantas   @relation(fields: [plantaId], references: [id])
+  destinos Destino[] @relation("UserDestinos")
+  choferes Chofer[]  @relation("UserChofer")
+  viajes   Viajes[]  @relation("UserViajes")
+}
+
+model Plantas {
+  id              Int               @id @default(autoincrement())
+  name            String
+  lat             Float
+  lng             Float
+  frecuencia      Float?
+  horariosRetiros String?
+  plantaProductos PlantaProductos[]
+  users           User[]
+  viajes          Viajes[]
+  chofer          Chofer[]
+}
+
+model Productos {
+  id              Int               @id @default(autoincrement())
+  name            String
+  categoria       String
+  presentacion    String
+  plantaProductos PlantaProductos[]
+}
+
+model PlantaProductos {
+  id         Int       @id @default(autoincrement())
+  planta     Plantas   @relation(fields: [plantaId], references: [id])
+  plantaId   Int
+  producto   Productos @relation(fields: [productoId], references: [id])
+  productoId Int
+
+  @@unique([plantaId, productoId])
+}
+
+model Destino {
+  id                   Int       @id @default(autoincrement())
+  createdByUserId      Int
+  name                 String
+  distancia_planta     Int?
+  condicionesEntrada   String?
+  frecuenciaConsumo    Int?
+  estimaProximoConsumo DateTime?
+  lat                  Float?
+  lng                  Float?
+  createdAt            DateTime  @default(now())
+  createdByUser        User      @relation("UserDestinos", fields: [createdByUserId], references: [id])
+  Viajes               Viajes[]  @relation("DestinoViajes")
+}
+
+model Chofer {
+  id               Int      @id @default(autoincrement())
+  createdByUserId  Int
+  name             String
+  lastName         String
+  celular          String
+  createdAt        DateTime @default(now())
+  plantaHabitualId Int?
+  plantaHabitual   Plantas? @relation(fields: [plantaHabitualId], references: [id])
+  createdByUser    User     @relation("UserChofer", fields: [createdByUserId], references: [id])
+  viajes           Viajes[] @relation("ChoferViajes")
+}
+
+model Viajes {
+  id                  Int      @id @default(autoincrement())
+  createdByUserId     Int
+  destinoId           Int
+  plantaId            Int
+  choferId            Int
+  fechaCarga          DateTime
+  horaCarga           String
+  kmRealesRecorridos  Int?
+  tiempoEstimadoCarga Int?
+  horaDescarga        String?
+  horaRetorno         String?
+  observaciones       String?
+  createdAt           DateTime @default(now())
+
+  planta        Plantas @relation(fields: [plantaId], references: [id])
+  createdByUser User    @relation("UserViajes", fields: [createdByUserId], references: [id])
+  destino       Destino @relation("DestinoViajes", fields: [destinoId], references: [id])
+  chofer        Chofer  @relation("ChoferViajes", fields: [choferId], references: [id])
+}
+
+model Proyeccion {
+  id        Int        @id @default(autoincrement())
+  dateStart DateTime
+  dateEnd   DateTime
+  secuencia DateTime[]
+}
