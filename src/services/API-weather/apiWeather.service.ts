@@ -9,6 +9,8 @@ export class WeatherService {
     const weatherData = await this.weatherApiAdapter.getCurrentWeather(lat, long);
     return {
       temp: weatherData.current.temp_c,
+      wind:weatherData.current.wind_kph,
+      windDir: weatherData.current.wind_dir,
       condition: weatherData.current.condition,
     };
   }

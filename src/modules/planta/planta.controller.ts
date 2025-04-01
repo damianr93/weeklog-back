@@ -3,6 +3,7 @@ import { PlantaService } from './planta.service';
 import { CreatePlantaDto } from './dto/create-planta.dto';
 import { UpdatePlantaDto } from './dto/update-planta.dto';
 
+
 @Controller('planta')
 export class PlantaController {
   constructor(private readonly plantaService: PlantaService) {}
@@ -31,4 +32,5 @@ export class PlantaController {
   remove(@Param('id') id: string) {
     return this.plantaService.remove(+id);
   }
+
 }

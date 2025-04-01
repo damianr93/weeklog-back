@@ -1,4 +1,4 @@
-import { HttpException, HttpStatus, Inject, Injectable } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { CreateViajeDto } from './dto/create-viaje.dto';
 import { UpdateViajeDto } from './dto/update-viaje.dto';
 import { WeatherService } from 'src/services/API-weather/apiWeather.service';
@@ -16,16 +16,14 @@ export class ViajesService {
     try {
       const nuevoViaje = await this.prisma.viajes.create({
         data: {
-          createdByUser: { connect: { id: createViajeDto.created_by } },
-          planta: { connect: { id: createViajeDto.planta } },
-          destino: { connect: { id: createViajeDto.destino } },
-          chofer: { connect: { id: createViajeDto.chofer } },
-          fechaCarga: new Date(createViajeDto.fecha_carga),
-          horaCarga: createViajeDto.hora_carga,
-          kmRealesRecorridos: createViajeDto.km_recorridos || null,
-          tiempoEstimadoCarga: createViajeDto.tiempo_carga || null,
-          horaDescarga: createViajeDto.hora_descarga || null,
-          horaRetorno: createViajeDto.hora_retorno || null,
+          createdByUser: { connect: { id: createViajeDto.createdByUserId } },
+          planta: { connect: { id: createViajeDto.plantaId } },
+          destino: { connect: { id: createViajeDto.destinoId } },
+          chofer: { connect: { id: createViajeDto.choferId } },
+          kmRealesRecorridos: createViajeDto.kmRealesRecorridos || null,
+          tiempoEstimadoCarga: createViajeDto.tiempoEstimadoCarga || null,
+          horaDescarga: createViajeDto.horaDescarga || null,
+          horaRetorno: createViajeDto.horaRetorno || null,
           observaciones: createViajeDto.observaciones || null,
         }
       });
@@ -35,19 +33,19 @@ export class ViajesService {
     } catch (error) {
       throw new HttpException(error.message, HttpStatus.BAD_REQUEST);
     }
-}
+  }
 
   async findAll() {
-
     try {
       const viajes = await this.prisma.viajes.findMany({
         include: {
           createdByUser: true,
-          planta:true,
+          planta: true,
           destino: true,
-          chofer: true
+          chofer: true,
         },
       });
+
       const destinosConClima = await Promise.all(
         viajes.map(async (viaje: any) => {
           const { lat, lng } = viaje.destino;
@@ -61,34 +59,27 @@ export class ViajesService {
       return destinosConClima;
 
     } catch (error) {
-
       throw new HttpException(error.message, HttpStatus.BAD_REQUEST)
-
     }
   }
 
   async findOne(id: string) {
     try {
-
       const viaje = await this.prisma.viajes.findUnique({
         where: { id: Number(id) },
         include: {
           createdByUser: true,
-          planta:true,
+          planta: true,
           destino: true,
           chofer: true
         },
       });
 
-      return viaje
+      return viaje;
 
     } catch (error) {
-
       throw new HttpException(error.message, HttpStatus.BAD_REQUEST)
-
     }
-
-
   }
 
   async update(id: string, updateViajeDto: UpdateViajeDto) {
@@ -96,30 +87,26 @@ export class ViajesService {
       const updatedViaje = await this.prisma.viajes.update({
         where: { id: Number(id) },
         data: {
-          createdByUser: updateViajeDto.created_by 
-            ? { connect: { id: updateViajeDto.created_by } } 
+          createdByUser: updateViajeDto.createdByUserId
+            ? { connect: { id: updateViajeDto.createdByUserId } }
             : undefined,
-          planta: updateViajeDto.planta 
-            ? { connect: { id: updateViajeDto.planta } } 
+          planta: updateViajeDto.plantaId
+            ? { connect: { id: updateViajeDto.plantaId } }
             : undefined,
-          fechaCarga: updateViajeDto.fecha_carga 
-            ? new Date(updateViajeDto.fecha_carga) 
-            : undefined,
-          horaCarga: updateViajeDto.hora_carga || undefined,
-          kmRealesRecorridos: updateViajeDto.km_recorridos !== undefined 
-            ? updateViajeDto.km_recorridos 
+          kmRealesRecorridos: updateViajeDto.kmRealesRecorridos !== undefined
+            ? updateViajeDto.kmRealesRecorridos
             : null,
-          tiempoEstimadoCarga: updateViajeDto.tiempo_carga !== undefined 
-            ? updateViajeDto.tiempo_carga 
+          tiempoEstimadoCarga: updateViajeDto.tiempoEstimadoCarga !== undefined
+            ? updateViajeDto.tiempoEstimadoCarga
             : null,
-          horaDescarga: updateViajeDto.hora_descarga || null,
-          horaRetorno: updateViajeDto.hora_retorno || null,
+          horaDescarga: updateViajeDto.horaDescarga || null,
+          horaRetorno: updateViajeDto.horaRetorno || null,
           observaciones: updateViajeDto.observaciones || null,
-          destino: updateViajeDto.destino 
-            ? { connect: { id: updateViajeDto.destino } } 
+          destino: updateViajeDto.destinoId
+            ? { connect: { id: updateViajeDto.destinoId } }
             : undefined,
-          chofer: updateViajeDto.chofer 
-            ? { connect: { id: updateViajeDto.chofer } } 
+          chofer: updateViajeDto.choferId
+            ? { connect: { id: updateViajeDto.choferId } }
             : undefined,
         },
         include: {
@@ -129,28 +116,24 @@ export class ViajesService {
           chofer: true,
         },
       });
-  
+
       return updatedViaje;
-  
+
     } catch (error) {
       throw new HttpException(error.message, HttpStatus.BAD_REQUEST);
     }
-}
+  }
 
   async remove(id: string) {
-
     try {
-
       const removedViaje = await this.prisma.viajes.delete({
         where: { id: Number(id) },
       });
 
-      return removedViaje
+      return removedViaje;
 
     } catch (error) {
-
       throw new HttpException(error.message, HttpStatus.BAD_REQUEST)
-
     }
   }
 }

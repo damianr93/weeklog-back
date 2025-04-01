@@ -14,28 +14,31 @@ datasource db {
 }
 
 model User {
-  id       Int       @id @default(autoincrement())
-  username String    @unique
-  role     String
-  plantaId Int
-  password String
-  planta   Plantas   @relation(fields: [plantaId], references: [id])
-  destinos Destino[] @relation("UserDestinos")
-  choferes Chofer[]  @relation("UserChofer")
-  viajes   Viajes[]  @relation("UserViajes")
+  id           Int          @id @default(autoincrement())
+  username     String       @unique
+  role         String
+  plantaId     Int
+  password     String
+  planta       Plantas      @relation(fields: [plantaId], references: [id])
+  destinos     Destino[]    @relation("UserDestinos")
+  choferes     Chofer[]     @relation("UserChofer")
+  viajes       Viajes[]     @relation("UserViajes")
+  proyecciones Proyeccion[]
 }
 
 model Plantas {
-  id              Int               @id @default(autoincrement())
-  name            String
-  lat             Float
-  lng             Float
-  frecuencia      Float?
-  horariosRetiros String?
-  plantaProductos PlantaProductos[]
-  users           User[]
-  viajes          Viajes[]
-  chofer          Chofer[]
+  id                     Int               @id @default(autoincrement())
+  name                   String
+  lat                    Float
+  lng                    Float
+  frecuencia             Float?
+  ultimaCambioFrecuencia DateTime?
+  horariosRetiros        String?
+  plantaProductos        PlantaProductos[]
+  users                  User[]
+  viajes                 Viajes[]
+  chofer                 Chofer[]
+  Proyeccion             Proyeccion[]
 }
 
 model Productos {
@@ -44,6 +47,8 @@ model Productos {
   categoria       String
   presentacion    String
   plantaProductos PlantaProductos[]
+  proyeccion      Proyeccion[]
+  HorarioRetiro   HorarioRetiro[]
 }
 
 model PlantaProductos {
@@ -90,8 +95,6 @@ model Viajes {
   destinoId           Int
   plantaId            Int
   choferId            Int
-  fechaCarga          DateTime
-  horaCarga           String
   kmRealesRecorridos  Int?
   tiempoEstimadoCarga Int?
   horaDescarga        String?
@@ -99,15 +102,40 @@ model Viajes {
   observaciones       String?
   createdAt           DateTime @default(now())
 
-  planta        Plantas @relation(fields: [plantaId], references: [id])
-  createdByUser User    @relation("UserViajes", fields: [createdByUserId], references: [id])
-  destino       Destino @relation("DestinoViajes", fields: [destinoId], references: [id])
-  chofer        Chofer  @relation("ChoferViajes", fields: [choferId], references: [id])
+  planta        Plantas        @relation(fields: [plantaId], references: [id])
+  createdByUser User           @relation("UserViajes", fields: [createdByUserId], references: [id])
+  destino       Destino        @relation("DestinoViajes", fields: [destinoId], references: [id])
+  chofer        Chofer         @relation("ChoferViajes", fields: [choferId], references: [id])
+  horarioRetiro HorarioRetiro?
 }
 
 model Proyeccion {
-  id        Int        @id @default(autoincrement())
-  dateStart DateTime
-  dateEnd   DateTime
-  secuencia DateTime[]
+  id          Int             @id @default(autoincrement())
+  nombre      String
+  dateStart   DateTime
+  dateEnd     DateTime
+  createdAt   DateTime        @default(now())
+  createdById Int
+  productoId  Int
+  createdBy   User            @relation(fields: [createdById], references: [id])
+  plantaId    Int
+  planta      Plantas         @relation(fields: [plantaId], references: [id])
+  horarios    HorarioRetiro[]
+  producto    Productos?      @relation(fields: [productoId], references: [id])
+  estado      String          @default("borrador")
+}
+
+model HorarioRetiro {
+  id            Int      @id @default(autoincrement())
+  proyeccionId  Int
+  productoId    Int
+  viajeId       Int?     @unique
+  fechaHora     DateTime
+  disponible    Boolean  @default(true)
+  observaciones String?
+
+  proyeccion  Proyeccion @relation(fields: [proyeccionId], references: [id], onDelete: Cascade)
+  viaje       Viajes?    @relation(fields: [viajeId], references: [id])
+  producto    Productos  @relation(fields: [productoId], references: [id])
+  
 }

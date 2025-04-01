@@ -10,6 +10,8 @@ import { ViajesModule } from './modules/viajes/viajes.module';
 import { DataProcesadaModule } from './modules/data-procesada/data-procesada.module';
 import { PlantaModule } from './modules/planta/planta.module';
 import { ProductosModule } from './modules/productos/productos.module';
+import { ProyeccionesModule } from './modules/proyecciones/proyecciones.module';
+import { RelacionPlantaProductosModule } from './modules/relacion-planta-productos/relacion-planta-productos.module';
 
 
 
@@ -22,7 +24,9 @@ import { ProductosModule } from './modules/productos/productos.module';
     ViajesModule,
     DataProcesadaModule,
     PlantaModule,
-    ProductosModule
+    ProductosModule,
+    ProyeccionesModule,
+    RelacionPlantaProductosModule
   ],
   controllers: [AppController],
   providers: [AppService, MyLogger],
