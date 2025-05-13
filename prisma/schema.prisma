@@ -102,11 +102,12 @@ model Viajes {
   observaciones       String?
   createdAt           DateTime @default(now())
 
-  planta        Plantas        @relation(fields: [plantaId], references: [id])
-  createdByUser User           @relation("UserViajes", fields: [createdByUserId], references: [id])
-  destino       Destino        @relation("DestinoViajes", fields: [destinoId], references: [id])
-  chofer        Chofer         @relation("ChoferViajes", fields: [choferId], references: [id])
-  horarioRetiro HorarioRetiro?
+  planta          Plantas       @relation(fields: [plantaId], references: [id])
+  createdByUser   User          @relation("UserViajes", fields: [createdByUserId], references: [id])
+  destino         Destino       @relation("DestinoViajes", fields: [destinoId], references: [id])
+  chofer          Chofer        @relation("ChoferViajes", fields: [choferId], references: [id])
+  horarioRetiro   HorarioRetiro @relation(fields: [horarioRetiroId], references: [id])
+  horarioRetiroId Int           @unique 
 }
 
 model Proyeccion {
@@ -130,12 +131,12 @@ model HorarioRetiro {
   proyeccionId  Int
   productoId    Int
   viajeId       Int?     @unique
-  fechaHora     DateTime
+  fecha         DateTime @db.Date // Solo almacena la fecha
+  hora          DateTime @db.Time // Solo almacena la hora
   disponible    Boolean  @default(true)
   observaciones String?
 
-  proyeccion  Proyeccion @relation(fields: [proyeccionId], references: [id], onDelete: Cascade)
-  viaje       Viajes?    @relation(fields: [viajeId], references: [id])
-  producto    Productos  @relation(fields: [productoId], references: [id])
-  
+  proyeccion Proyeccion @relation(fields: [proyeccionId], references: [id], onDelete: Cascade)
+  viaje      Viajes?    @relation
+  producto   Productos  @relation(fields: [productoId], references: [id])
 }

@@ -56,6 +56,5 @@ export class CreateViajeDto {
   readonly observaciones?: string;
 
   @IsNumber()
-  @IsOptional()
   horarioRetiroId:number
 }

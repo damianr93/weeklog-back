@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
 import { CreateProyeccioneDto } from './dto/create-proyeccione.dto';
 import { UpdateProyeccioneDto } from './dto/update-proyeccione.dto';
 import { PrismaService } from 'src/services/database-sql/prisma.service';
@@ -12,7 +12,7 @@ export class ProyeccionesService {
   ) { }
 
   async create(createProyeccionDto: CreateProyeccioneDto) {
-    const { nombre, dateStart, dateEnd, plantaId, createdById } = createProyeccionDto;
+    const { dateStart, dateEnd, plantaId, createdById } = createProyeccionDto;
 
     // 1. Buscar la planta para obtener la frecuencia
     const planta = await this.prisma.plantas.findUnique({
@@ -39,34 +39,37 @@ export class ProyeccionesService {
     // 3. Generar los horarios basados en la frecuencia de la planta
     const horarios = this.generarHorarios(
       new Date(dateStart),
+      createProyeccionDto.horaInicio,
       new Date(dateEnd),
       planta.frecuencia
     );
-    
+
     // 4. Crear los registros de horarios de retiro
     if (horarios.length > 0) {
       await this.prisma.horarioRetiro.createMany({
-        data: horarios.map(fechaHora => ({
+        data: horarios.map(horario => ({
           proyeccionId: proyeccion.id,
-          fechaHora,
+          fecha: horario.fecha,
+          hora: horario.hora,
           productoId: createProyeccionDto.productoId,
           disponible: true,
         }))
       });
     }
 
-    // 5. Retornar la proyección creada con sus horarios
+    // 5. Retornar la proyección creada con el mismo formato que findAll
     return this.prisma.proyeccion.findUnique({
       where: { id: proyeccion.id },
       include: {
-        horarios: {
-          orderBy: { fechaHora: 'asc' }
-        },
         planta: {
           select: { id: true, name: true, frecuencia: true }
         },
         createdBy: {
           select: { id: true, username: true }
+        },
+        producto: true,
+        _count: {
+          select: { horarios: true }
         }
       }
     });
@@ -81,6 +84,7 @@ export class ProyeccionesService {
         createdBy: {
           select: { id: true, username: true }
         },
+        producto: true,
         _count: {
           select: { horarios: true }
         }
@@ -93,7 +97,7 @@ export class ProyeccionesService {
       where: { id },
       include: {
         horarios: {
-          orderBy: { fechaHora: 'asc' }
+          orderBy: { fecha: 'asc' }
         },
         planta: {
           select: { id: true, name: true, frecuencia: true }
@@ -113,7 +117,11 @@ export class ProyeccionesService {
 
   async update(id: number, updateProyeccionDto: UpdateProyeccioneDto) {
     // Verificar que la proyección existe
-    await this.findOne(id);
+    const proyeccionToEdit = await this.findOne(id);
+
+    if (proyeccionToEdit.estado === 'activa') {
+      return new HttpException('La proyeccion no puede ser editada cuando esta activa', HttpStatus.CONFLICT)
+    }
 
     // Actualizar la proyección
     await this.prisma.proyeccion.update({
@@ -121,8 +129,51 @@ export class ProyeccionesService {
       data: updateProyeccionDto
     });
 
-    // Retornar la proyección actualizada
-    return this.findOne(id);
+    const planta = await this.prisma.plantas.findUnique({
+      where: { id: updateProyeccionDto.plantaId }
+    });
+
+
+    await this.prisma.horarioRetiro.deleteMany({ where: { proyeccionId: id } })
+
+    // 3. Generar los horarios basados en la frecuencia de la planta
+    const horarios = this.generarHorarios(
+      new Date(updateProyeccionDto.dateStart),
+      updateProyeccionDto.horaInicio,
+      new Date(updateProyeccionDto.dateEnd),
+      planta.frecuencia
+    );
+
+    // 4. Crear los registros de horarios de retiro
+    if (horarios.length > 0) {
+      await this.prisma.horarioRetiro.createMany({
+        data: horarios.map(horario => ({
+          proyeccionId: updateProyeccionDto.id,
+          fecha: horario.fecha,
+          hora: horario.hora,
+          productoId: updateProyeccionDto.productoId,
+          disponible: true,
+        }))
+      });
+    }
+
+
+    // Retornar la proyección actualizada con el mismo formato que findAll
+    return this.prisma.proyeccion.findUnique({
+      where: { id },
+      include: {
+        planta: {
+          select: { id: true, name: true, frecuencia: true }
+        },
+        createdBy: {
+          select: { id: true, username: true }
+        },
+        producto: true,
+        _count: {
+          select: { horarios: true }
+        }
+      }
+    });
   }
 
   async remove(id: number) {
@@ -157,71 +208,83 @@ export class ProyeccionesService {
     });
   }
 
-  async regenerarHorarios(id: number, desde?: Date) {
-    // 1. Obtener la proyección y la planta
-    const proyeccion = await this.prisma.proyeccion.findUnique({
-      where: { id },
-      include: { planta: true }
-    });
-
-    if (!proyeccion) {
-      throw new NotFoundException(`No se encontró la proyección con ID ${id}`);
-    }
-
-    if (!proyeccion.planta.frecuencia) {
-      throw new Error('La planta asociada no tiene definida una frecuencia');
-    }
-
-    // 2. Determinar la fecha desde la cual regenerar
-    const fechaDesde = desde || new Date();
-
-    // 3. Eliminar horarios futuros que no tengan viaje asignado
-    await this.prisma.horarioRetiro.deleteMany({
-      where: {
-        proyeccionId: id,
-        fechaHora: { gte: fechaDesde },
-        viajeId: null,
-      }
-    });
-
-    // 4. Generar nuevos horarios
-    const horarios = this.generarHorarios(
-      fechaDesde,
-      new Date(proyeccion.dateEnd),
-      proyeccion.planta.frecuencia
-    );
-
-    // 5. Crear los nuevos registros de horarios
-    if (horarios.length > 0) {
-      await this.prisma.horarioRetiro.createMany({
-        data: horarios.map(fechaHora => ({
-          proyeccionId: id,
-          fechaHora,
-          productoId: proyeccion.plantaId,
-          disponible: true,
-        }))
+  async regenerarHorarios(id: number, updateProyeccioneDto:UpdateProyeccioneDto) {
+    try {
+      // 1. Obtener la proyección y la planta
+      const proyeccion = await this.prisma.proyeccion.findUnique({
+        where: { id },
+        include: { planta: true }
       });
-    }
 
-    return {
-      message: `Se han regenerado los horarios correctamente`,
-      count: horarios.length
-    };
+      if (!proyeccion) {
+        throw new NotFoundException(`No se encontró la proyección con ID ${id}`);
+      }
+
+      if (!proyeccion.planta.frecuencia) {
+        throw new Error('La planta asociada no tiene definida una frecuencia');
+      }
+
+      // 2. Determinar la fecha desde la cual regenera
+      console.log(updateProyeccioneDto)
+      const fechaDesde = new Date(updateProyeccioneDto.dateStart);
+   
+      // 3. Eliminar horarios futuros que no tengan viaje asignado
+      await this.prisma.horarioRetiro.deleteMany({
+        where: {
+          proyeccionId: id,
+          fecha: { gte: fechaDesde },
+          viajeId: null,
+        }
+      });
+
+      // 4. Generar nuevos horarios 
+      const horarios = this.generarHorarios(
+        fechaDesde,
+        updateProyeccioneDto.horaInicio,
+        new Date(proyeccion.dateEnd),
+        proyeccion.planta.frecuencia
+      );
+
+      // 5. Crear los nuevos registros de horarios
+      if (horarios.length > 0) {
+        await this.prisma.horarioRetiro.createMany({
+          data: horarios.map(fechaHora => ({
+            proyeccionId: id,
+            fecha: fechaHora.fecha,
+            hora: fechaHora.hora,
+            productoId: proyeccion.plantaId,
+            disponible: true,
+            viajeId:null
+          }))
+        });
+      }
+
+      return {
+        message: `Se han regenerado los horarios correctamente`,
+        count: horarios.length
+      };
+
+    } catch (error) {
+      throw new HttpException(error.message, HttpStatus.BAD_REQUEST)
+    }
   }
 
   async findHorariosProyeccion() {
     const fechaActual = new Date();
 
-    const proyecciones = await this.prisma.proyeccion.findMany({
-      where: {
-        dateEnd: { gte: fechaActual }
-      },
-      include: {
-        horarios: {
-          orderBy: { fechaHora: 'asc' }
+    const proyecciones = await this.prisma.proyeccion.findMany(
+      {
+        where: {
+          dateEnd: { gte: fechaActual }
+        },
+        include: {
+          horarios: {
+            orderBy: [
+              { id: 'asc' },
+            ]
+          }
         }
-      }
-    });
+      });
 
     if (!proyecciones.length) {
       throw new NotFoundException('No se encontraron proyecciones en vigencia');
@@ -237,13 +300,43 @@ export class ProyeccionesService {
    * @param frecuenciaHoras Frecuencia en horas
    * @returns Array de fechas generadas
    */
-  private generarHorarios(desde: Date, hasta: Date, frecuenciaHoras: number): Date[] {
-    const horarios: Date[] = [];
+  // Método generarHorarios modificado
+  private generarHorarios(
+    desde: Date,
+    horaInicio: String,
+    hasta: Date,
+    frecuenciaHoras: number
+  ): Array<{ fecha: Date, hora: Date }> {
+    const horarios: Array<{ fecha: Date, hora: Date }> = [];
+
+    const [hours, minutes] = horaInicio.split(":").map(Number);
+
+    const horaInicioFormat = new Date();
+    horaInicioFormat.setHours(hours);
+    horaInicioFormat.setMinutes(minutes);
+    horaInicioFormat.setSeconds(0);
+    horaInicioFormat.setMilliseconds(0);
+
+    // Obtener las horas y minutos de la hora de inicio
+    const horasInicio = horaInicioFormat.getHours();
+    const minutosInicio = horaInicioFormat.getMinutes();
+
+    // Establecer la fecha inicial con la hora de inicio proporcionada
     let fechaActual = new Date(desde);
+    fechaActual.setHours(horasInicio, minutosInicio, 0, 0);
 
     while (fechaActual <= hasta) {
-      horarios.push(new Date(fechaActual));
-      // Calcula la siguiente fecha sumando la frecuencia en milisegundos
+      // Crear objeto para la fecha (sin tiempo)
+      const fecha = new Date(fechaActual);
+      fecha.setHours(0, 0, 0, 0);
+
+      // Crear objeto para la hora (conservando solo hora y minutos)
+      const hora = new Date();
+      hora.setHours(fechaActual.getHours(), fechaActual.getMinutes(), 0, 0);
+
+      horarios.push({ fecha, hora });
+
+      // Calcula la siguiente fecha sumando la frecuencia
       fechaActual = new Date(fechaActual.getTime() + frecuenciaHoras * 60 * 60 * 1000);
     }
 

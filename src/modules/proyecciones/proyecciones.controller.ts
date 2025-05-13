@@ -34,10 +34,13 @@ export class ProyeccionesController {
 
   @Patch('/regenerarHorarios/:id')
   regenerarHorarios(@Param('id') id: string, @Body() updateProyeccioneDto: UpdateProyeccioneDto) {
-    return this.proyeccionesService.regenerarHorarios(+id, new Date( updateProyeccioneDto.dateStart));
+    return this.proyeccionesService.regenerarHorarios(+id, updateProyeccioneDto);
   }
 
-
+ @Patch('/activar/:id')
+ activarProyeccion(@Param('id') id: string) {
+  return this.proyeccionesService.activarProyeccion(+id)
+ }
 
   @Delete(':id')
   remove(@Param('id') id: string) {

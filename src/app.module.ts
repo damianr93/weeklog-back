@@ -12,6 +12,9 @@ import { PlantaModule } from './modules/planta/planta.module';
 import { ProductosModule } from './modules/productos/productos.module';
 import { ProyeccionesModule } from './modules/proyecciones/proyecciones.module';
 import { RelacionPlantaProductosModule } from './modules/relacion-planta-productos/relacion-planta-productos.module';
+import { APP_GUARD } from '@nestjs/core';
+import { AuthGuard } from './modules/auth/auth.guard';
+import { PrismaService } from './services/database-sql/prisma.service';
 
 
 
@@ -29,7 +32,15 @@ import { RelacionPlantaProductosModule } from './modules/relacion-planta-product
     RelacionPlantaProductosModule
   ],
   controllers: [AppController],
-  providers: [AppService, MyLogger],
+  providers: [
+    AppService, 
+    MyLogger,
+    PrismaService,
+    {
+      provide: APP_GUARD,
+      useClass: AuthGuard,
+    },
+  ],
 })
 export class AppModule {}
 

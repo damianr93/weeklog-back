@@ -7,17 +7,18 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { MyLogger } from './services/logger/logger';
 import { ConfigService } from '@nestjs/config';
 import { envs } from './config/envs';
+import * as cookieParser from 'cookie-parser';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-
   const configService = app.get(ConfigService);
+  app.use(cookieParser());
 
   app.enableVersioning({
     type: VersioningType.URI,
   });
   app.enableCors({
-    origin: '*',
+    origin: 'http://localhost:5173',
     credentials: true,
   });
 

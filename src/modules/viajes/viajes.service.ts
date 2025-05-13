@@ -3,16 +3,19 @@ import { CreateViajeDto } from './dto/create-viaje.dto';
 import { UpdateViajeDto } from './dto/update-viaje.dto';
 import { WeatherService } from 'src/services/API-weather/apiWeather.service';
 import { PrismaService } from 'src/services/database-sql/prisma.service';
+import { ProyeccionesService } from '../proyecciones/proyecciones.service';
 
 @Injectable()
 export class ViajesService {
 
   constructor(
     private readonly prisma: PrismaService,
+    private readonly proyeccionesSercive: ProyeccionesService,
     private readonly weatherService: WeatherService,
   ) { }
 
   async create(createViajeDto: CreateViajeDto) {
+
     try {
       const nuevoViaje = await this.prisma.viajes.create({
         data: {
@@ -20,6 +23,7 @@ export class ViajesService {
           planta: { connect: { id: createViajeDto.plantaId } },
           destino: { connect: { id: createViajeDto.destinoId } },
           chofer: { connect: { id: createViajeDto.choferId } },
+          horarioRetiro: { connect: { id: createViajeDto.horarioRetiroId } },
           kmRealesRecorridos: createViajeDto.kmRealesRecorridos || null,
           tiempoEstimadoCarga: createViajeDto.tiempoEstimadoCarga || null,
           horaDescarga: createViajeDto.horaDescarga || null,
@@ -27,6 +31,16 @@ export class ViajesService {
           observaciones: createViajeDto.observaciones || null,
         }
       });
+
+
+      await this.prisma.horarioRetiro.update({
+        where: { id: createViajeDto.horarioRetiroId },
+        data: {
+          viajeId: nuevoViaje.id,
+          disponible: false
+        }
+      });
+
 
       return nuevoViaje;
 
@@ -43,6 +57,7 @@ export class ViajesService {
           planta: true,
           destino: true,
           chofer: true,
+          horarioRetiro:true
         },
       });
 
@@ -71,7 +86,8 @@ export class ViajesService {
           createdByUser: true,
           planta: true,
           destino: true,
-          chofer: true
+          chofer: true,
+          horarioRetiro:true
         },
       });
 
@@ -128,6 +144,14 @@ export class ViajesService {
     try {
       const removedViaje = await this.prisma.viajes.delete({
         where: { id: Number(id) },
+      });
+
+      await this.prisma.horarioRetiro.update({
+        where: { id: removedViaje.horarioRetiroId },
+        data: {
+          viajeId: null,
+          disponible: true
+        }
       });
 
       return removedViaje;

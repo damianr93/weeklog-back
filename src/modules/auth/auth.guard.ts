@@ -24,29 +24,37 @@ export class AuthGuard implements CanActivate {
       return true
     }
 
-    const req = context.switchToHttp().getRequest()
+    const req = context.switchToHttp().getRequest();
 
-    const token = req.headers['codrr_token']
+    // Verificar tanto el header como la cookie
+    let token = req.headers['codrr_token'];
+    
+    // Si no hay token en el header, verificar en las cookies
     if (!token || Array.isArray(token)) {
-      throw new UnauthorizedException('invalid token')
+      token = req.cookies?.Authentication;
+
+      // Si tampoco hay cookie válida
+      if (!token) {
+        throw new UnauthorizedException('Token no proporcionado');
+      }
     }
 
-    const manageToken: IUseToken | string = useToken(token)
+    const manageToken: IUseToken | string = useToken(token);
 
     if (typeof manageToken === 'string') {
-      throw new UnauthorizedException(manageToken)
+      throw new UnauthorizedException(manageToken);
     }
 
     if (manageToken.isExpires) {
-      throw new UnauthorizedException('token expired')
+      throw new UnauthorizedException('Token expirado');
     }
 
-    const { sub } = manageToken
+    const { sub } = manageToken;
 
-    const user = await this.prisma.user.findUnique({ where: { id: sub } })
+    const user = await this.prisma.user.findUnique({ where: { id: sub } });
 
     if (!user) {
-      throw new UnauthorizedException('invalid user')
+      throw new UnauthorizedException('Usuario inválido');
     }
 
     req.user = {

@@ -29,14 +29,12 @@ export class CreateDestinoDto {
     description: 'Latitud del destino',
     example: '-34.123456'
   })
-  @IsString()  
   readonly lat: string;
 
   @ApiProperty({
     description: 'Longitud del destino',
     example: '-58.123456'
   })
-  @IsString()  
   readonly lng: string;
 
   @ApiProperty({
