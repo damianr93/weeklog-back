@@ -1,6 +1,4 @@
 import {
-  HttpException,
-  HttpStatus,
   Injectable,
   NotFoundException,
   UnauthorizedException,
@@ -17,17 +15,14 @@ export class AuthService {
   ) { }
 
   async validateUser(username: string, pass: string) {
-    // Verificar si username existe
     if (!username || !pass) {
       throw new UnauthorizedException('Username and password is required');
     }
     
-    // Aquí está el problema: username está siendo tratado como undefined
     const user = await this.prisma.user.findUnique({
       where: {
-        username: username, // Asegúrate de que username se está pasando correctamente
+        username: username,
       },
-      include: { planta: true },
     });
     
     if (!user) {

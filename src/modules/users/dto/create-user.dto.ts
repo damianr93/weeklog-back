@@ -1,7 +1,23 @@
 import { ApiProperty } from "@nestjs/swagger"
-import { IsEnum, IsNotEmpty, IsNumber, IsString, MaxLength, MinLength } from "class-validator"
+import { Role } from "@prisma/client"
+import {
+    IsEnum,
+    IsNotEmpty,
+    IsOptional,
+    IsString,
+    MaxLength,
+    MinLength
+} from "class-validator"
 
 export class CreateUserDto {
+
+    @ApiProperty({
+        example: 1,
+        description: 'ID of the user',
+        required: false,
+    })
+    @IsOptional()
+    id?: number
 
     @ApiProperty({
         example: 'Angel Damian',
@@ -10,18 +26,18 @@ export class CreateUserDto {
         minLength: 4,
     })
     @IsString({ message: 'The username of the user must be string' })
-    @IsNotEmpty({ message: 'The username of the user is requires' })
+    @IsNotEmpty({ message: 'The username of the user is required' })
     @MaxLength(15, { message: 'username must be less than 15 characters' })
     @MinLength(4, { message: 'username must be mora than 4 characters' })
     username: string
 
     @ApiProperty({
-        example: 1, // ID de la planta
+        example: 1,
         description: 'ID de la planta del operador logístico',
     })
-    @IsNumber()
+    @IsOptional()
     @IsNotEmpty()
-    plantaId: number
+    plantId?: number
 
     @ApiProperty({
         example: 'admin',
@@ -29,18 +45,18 @@ export class CreateUserDto {
     })
     @IsString({ message: 'The role of the user must be string' })
     @IsNotEmpty({ message: 'The role of the user is requires' })
-    @IsEnum(['admin', 'user'], { message: 'role must be one of the following values: admin, user' })
-    role: string
+    @IsEnum(['ADMIN', 'OPERATOR', 'DRIVER', 'CLIENT'], { message: 'role must be one of the following values: ADMIN, OPERATOR, DRIVER, CLIENT' })
+    role: Role
 
     @ApiProperty({
-        example: '0303456',
-        description: 'password of the user',
-        maxLength: 50,
+        example: 'secret123',
+        description: 'User password',
+        maxLength: 15,
         minLength: 6,
     })
-    @IsString({ message: 'The password of the user must be string' })
-    @IsNotEmpty({ message: 'The password of the user is requires' })
-    @MaxLength(15, { message: 'password must be less than 15 characters' })
-    @MinLength(6, { message: 'password must be mora than 6 characters' })
+    @IsString()
+    @IsNotEmpty({ message: 'Password is required' })
+    @MaxLength(15, { message: 'Password must be less than 15 characters' })
+    @MinLength(6, { message: 'Password must be at least 6 characters' })
     password: string
 }

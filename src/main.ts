@@ -18,7 +18,7 @@ async function bootstrap() {
     type: VersioningType.URI,
   });
   app.enableCors({
-    origin: 'http://localhost:5173',
+    origin: envs.FRONTEND_URL,
     credentials: true,
   });
 

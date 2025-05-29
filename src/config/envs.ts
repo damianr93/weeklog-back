@@ -6,4 +6,5 @@ export const envs = {
     JWT_SECTRET: get('JWT_SECTRET').required().asString(),
     API_WHEATHER: get('API_KEY_WHEATER').required().asString(),
     PORT: get('PORT').required().asPortNumber(),
+    FRONTEND_URL: get('FRONTEND_URL').required().asString(),
 }
